@@ -4,6 +4,7 @@ namespace Pterodactyl\Http\Controllers\Api\Application\Servers;
 
 use Carbon\CarbonImmutable;
 use Pterodactyl\Models\Server;
+use Pterodactyl\Models\Allocation;
 use Illuminate\Http\JsonResponse;
 use Pterodactyl\Models\ServerTransfer;
 use Illuminate\Database\ConnectionInterface;
@@ -98,11 +99,23 @@ class ServerTransferController extends ApplicationApiController
 
     /**
      * Assigns the specified allocations to the specified server.
+     *
+     * @throws \Pterodactyl\Exceptions\DisplayException
      */
     private function assignAllocationsToServer(Server $server, int $node_id, int $allocation_id, array $additional_allocations)
     {
         $allocations = $additional_allocations;
-        $allocations[] = $allocation_id;
+
+        // Use optimistic locking to ensure the primary allocation is still available.
+        // We update where id = allocation_id AND server_id IS NULL.
+        // If 0 rows are updated, it means it's already taken.
+        $updated = Allocation::where('id', $allocation_id)
+            ->whereNull('server_id')
+            ->update(['server_id' => $server->id]);
+
+        if ($updated !== 1) {
+            throw new \Pterodactyl\Exceptions\DisplayException('The selected allocation is no longer available. Please try again.');
+        }
 
         $unassigned = $this->allocationRepository->getUnassignedAllocationIds($node_id);
 
