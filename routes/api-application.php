@@ -92,6 +92,8 @@ Route::group(['prefix' => '/servers'], function () {
     Route::delete('/{server:id}', [Application\Servers\ServerController::class, 'delete']);
     Route::delete('/{server:id}/{force?}', [Application\Servers\ServerController::class, 'delete']);
 
+    Route::post('/{server:id}/transfer', [Application\Servers\ServerTransferController::class, 'store'])->name('api.application.servers.transfer');
+
     // Database Management Endpoint
     Route::group(['prefix' => '/{server:id}/databases'], function () {
         Route::get('/', [Application\Servers\DatabaseController::class, 'index'])->name('api.application.servers.databases');
